@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Rekordlar — MaxZ Servers{% endblock %}
+{% block nav_rec %}active{% endblock %}
+
+{% block content %}
+<div class="page-title">⏱ So'nggi rekordlar</div>
+
+{% if records %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>O'yinchi</th>
+            <th>Map</th>
+            <th>Vaqt</th>
+            <th>Tugatgan</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in records %}
+        <tr>
+            <td>{{ r.name }}</td>
+            <td class="mono">{{ r.map }}</td>
+            <td class="pts mono">{{ r.time }}</td>
+            <td>{{ r.times_finished }}x</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty">Hozircha rekordlar yo'q.</div>
+{% endif %}
+{% endblock %}

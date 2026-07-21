@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — MaxZ Servers{% endblock %}
+
+{% block content %}
+<style>
+    .err-wrap { text-align: center; padding: 70px 20px; }
+    .err-icon { font-size: 64px; margin-bottom: 18px; }
+    .err-title { font-size: 26px; font-weight: 800; margin-bottom: 12px; }
+    .err-msg { color: #8b98a5; font-size: 15px; max-width: 460px; margin: 0 auto 28px; line-height: 1.6; }
+    .err-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .err-btn {
+        padding: 11px 22px; border-radius: 9px; font-weight: 700; font-size: 14px;
+        border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; background: rgba(255,255,255,0.05);
+    }
+    .err-btn:hover { border-color: rgba(0,255,136,0.4); color: #fff; }
+    .err-btn.primary { background: linear-gradient(135deg, #00ff88, #00b3ff); color: #0a0e12; border: none; }
+</style>
+
+<div class="err-wrap">
+    <div class="err-icon">⚠️</div>
+    <div class="err-title">{{ title|default:"Xatolik" }}</div>
+    <div class="err-msg">{{ message|default:"Kutilmagan xatolik. Birozdan so'ng qayta urinib ko'ring." }}</div>
+    <div class="err-actions">
+        <a href="/" class="err-btn">🏠 Bosh sahifa</a>
+        {% if show_retry_login %}
+            <a href="/auth/login/steam/" class="err-btn primary">↻ Qayta urinish</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}MaxZ Servers — Serverlar{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block content %}
+<style>
+    .servers {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+        gap: 18px;
+    }
+    .card {
+        position: relative; height: 150px; border-radius: 14px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        background-size: cover; background-position: center;
+        transition: transform .2s, border-color .2s;
+    }
+    .card:hover { transform: translateY(-3px); border-color: rgba(0,255,136,0.45); }
+    .card.bhop { background-image: linear-gradient(135deg, #0d3b2e, #0a1f2b); }
+    .card.kz   { background-image: linear-gradient(135deg, #2e1a4d, #0a1320); }
+    .card.def  { background-image: linear-gradient(135deg, #1b2a38, #0a1320); }
+    .overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(90deg, rgba(7,10,14,0.92) 0%, rgba(7,10,14,0.55) 55%, rgba(7,10,14,0.25) 100%);
+    }
+    .c-content { position: absolute; inset: 0; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; }
+    .c-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .server-name { font-size: 18px; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+    .badge { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #00ff88; background: rgba(0,255,136,0.12); padding: 4px 9px; border-radius: 20px; white-space: nowrap; }
+    .badge.status { display: inline-flex; align-items: center; gap: 5px; }
+    .badge.status .dot { width: 7px; height: 7px; border-radius: 50%; background: #5b6571; }
+    .badge.online { color: #00ff88; background: rgba(0,255,136,0.12); }
+    .badge.online .dot { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+    .badge.offline { color: #ff6b6b; background: rgba(255,107,107,0.12); }
+    .badge.offline .dot { background: #ff6b6b; }
+    .c-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+    .map-name { font-size: 12px; color: #aeb9c4; margin-bottom: 4px; font-family: 'Consolas', monospace; }
+    .ip { font-size: 15px; font-weight: 700; color: #58e6a0; font-family: 'Consolas', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .c-btns { display: flex; flex-direction: column; gap: 6px; }
+    .copy-btn { background: linear-gradient(135deg, #00ff88, #00b3ff); color: #0a0e12; border: none; border-radius: 9px; padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; transition: opacity .2s; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,.35); text-align: center; text-decoration: none; }
+    .copy-btn:hover { opacity: .9; }
+    .copy-btn.copied { background: #2ea043; color: #fff; }
+    .connect-btn { background: linear-gradient(135deg, #00ff88, #00b3ff); }
+    .copy-btn.alt { background: rgba(13,17,23,0.7); color: #e6edf3; border: 1px solid rgba(255,255,255,0.15); box-shadow: none; font-size: 12px; padding: 7px 16px; }
+    .server-group { margin-bottom: 26px; }
+    .group-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #8b98a5; margin: 0 0 12px 2px; display: flex; align-items: center; gap: 8px; }
+    .group-label::before { content: ''; width: 4px; height: 14px; border-radius: 2px; background: linear-gradient(#00ff88, #00b3ff); }
+    .group-label .count { color: #5b6571; font-weight: 600; letter-spacing: 1px; }
+</style>
+
+<div class="page-title">Serverlar</div>
+
+{% for g in groups %}
+<div class="server-group">
+    <div class="group-label">{{ g.label }} <span class="count">· {{ g.servers|length }}</span></div>
+    <div class="servers">
+        {% for s in g.servers %}
+        <div class="card {% if g.type == 'bhop' %}bhop{% elif g.type == 'kz' %}kz{% else %}def{% endif %}"
+             {% if s.map_image %}style="background-image: url('{{ s.map_image }}')"{% endif %}>
+            <div class="overlay"></div>
+            <div class="c-content">
+                <div class="c-top">
+                    <span class="server-name">{{ s.name }}</span>
+                    <span class="badge status offline" id="st-{{ s.id }}"><span class="dot"></span>···</span>
+                </div>
+                <div class="c-bottom">
+                    <div>
+                        <div class="map-name" id="map-{{ s.id }}">{{ s.current_map|default:"—" }}</div>
+                        <div class="ip">192.168.100.92:{{ s.port }}</div>
+                    </div>
+                    <div class="c-btns">
+                        <a class="copy-btn connect-btn" href="steam://connect/192.168.100.92:{{ s.port }}">▶ Connect</a>
+                        <button class="copy-btn alt" onclick="copyIp('connect 192.168.100.92:{{ s.port }}', this)">Copy IP</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% empty %}
+<div class="empty">Hozircha server yo'q.</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyIp(text, btn) {
+        navigator.clipboard.writeText(text).then(function () { mark(btn); }).catch(function () {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta);
+            ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            mark(btn);
+        });
+    }
+    function mark(btn) {
+        const o = btn.textContent;
+        btn.textContent = '✓ Nusxalandi'; btn.classList.add('copied');
+        setTimeout(function () { btn.textContent = o; btn.classList.remove('copied'); }, 1500);
+    }
+
+    // --- Jonli server holati (backenddan) ---
+    async function refreshStatus() {
+        try {
+            const res = await fetch('/api/servers/public-status/', { credentials: 'same-origin' });
+            if (!res.ok) return;
+            const data = await res.json();
+            (data.servers || []).forEach(function (s) {
+                const st = document.getElementById('st-' + s.id);
+                if (st) {
+                    st.classList.remove('online', 'offline');
+                    if (s.online) {
+                        st.classList.add('online');
+                        st.innerHTML = '<span class="dot"></span>Online ' + s.players + '/' + (s.max_players || '?');
+                    } else {
+                        st.classList.add('offline');
+                        st.innerHTML = '<span class="dot"></span>Offline';
+                    }
+                }
+                const mp = document.getElementById('map-' + s.id);
+                if (mp && s.map) mp.textContent = s.map;
+            });
+        } catch (e) { /* jim */ }
+    }
+    refreshStatus();
+    setInterval(refreshStatus, 30000);
+</script>
+{% endblock %}

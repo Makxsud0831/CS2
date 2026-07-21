@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+{% block title %}Skinlar — MaxZ Servers{% endblock %}
+{% block nav_skins %}active{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="page-title">🔫 Skin tanlash</div>
+
+{% if not steam_id %}
+<div class="empty">Steam profilingiz ulanmagan. Steam orqali qayta kiring.</div>
+{% else %}
+
+<style>
+    .wp-hint { color: #8b98a5; font-size: 13px; margin-bottom: 18px; }
+    .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px,1fr)); gap: 14px; padding-bottom: 90px; }
+    .slot { position: relative; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; cursor: pointer; transition: .15s; min-height: 120px; display: flex; flex-direction: column; }
+    .slot:hover { border-color: rgba(0,255,136,0.45); transform: translateY(-2px); }
+    .slot.pending { border-color: #ffb020; box-shadow: 0 0 0 1px #ffb020 inset; }
+    .slot .title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+    .slot .img { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .slot .img img { max-width: 100%; max-height: 56px; object-fit: contain; }
+    .slot .skinname { font-size: 11px; color: #aeb9c4; margin-top: 6px; min-height: 14px; line-height: 1.3; }
+    .slot .empty-mark { color: #5b6571; font-size: 12px; }
+    .slot.special { border-color: rgba(0,179,255,0.25); }
+    .seedrow { margin-top: 8px; }
+    .seed-btn { background: rgba(0,179,255,0.12); border: 1px solid rgba(0,179,255,0.35); color: #cfe9ff; border-radius: 7px; padding: 5px 9px; font-size: 11px; cursor: pointer; width: 100%; }
+    .seed-btn:hover { background: rgba(0,179,255,0.22); }
+    .seed-btn b { color: #fff; }
+    .seed-input { width: 100%; background: #0a0e12; border: 1px solid rgba(0,179,255,0.5); color: #fff; border-radius: 7px; padding: 5px 8px; font-size: 12px; outline: none; }
+
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+    .modal-bg.show { display: flex; }
+    .modal { background: #11161c; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; width: 100%; max-width: 800px; max-height: 84vh; display: flex; flex-direction: column; }
+    .modal-top { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .modal-top .mt-left { display: flex; align-items: center; gap: 12px; }
+    .mback { color: #8b98a5; cursor: pointer; font-size: 13px; }
+    .mback:hover { color: #fff; }
+    .modal-close { cursor: pointer; color: #8b98a5; font-size: 22px; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 10px; padding: 16px; overflow-y: auto; }
+    .cell { background: rgba(255,255,255,0.04); border: 2px solid transparent; border-radius: 9px; padding: 8px; cursor: pointer; text-align: center; }
+    .cell:hover { background: rgba(255,255,255,0.08); }
+    .cell.sel { border-color: #00ff88; }
+    .cell img { width: 100%; height: 58px; object-fit: contain; }
+    .cell .cn { font-size: 11px; color: #aeb9c4; margin-top: 5px; line-height: 1.25; }
+
+    .savebar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10,14,18,0.95); border-top: 1px solid rgba(255,255,255,0.1); padding: 14px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 14px; backdrop-filter: blur(8px); z-index: 40; }
+    .savebar .info { color: #8b98a5; font-size: 13px; margin-right: auto; }
+    .save-btn { background: linear-gradient(135deg,#00ff88,#00b3ff); color: #0a0e12; border: none; border-radius: 9px; padding: 12px 26px; font-weight: 800; font-size: 15px; cursor: pointer; }
+    .save-btn.small { padding: 10px 20px; font-size: 14px; }
+    .save-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .save-btn:not(:disabled):hover { opacity: .9; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #2ea043; color: #fff; padding: 11px 20px; border-radius: 9px; font-weight: 700; font-size: 14px; display: none; z-index: 60; }
+    .toast.show { display: block; }
+
+    /* Basic (bepul) bo'lim */
+    .basic-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px; margin-bottom: 22px; }
+    .basic-head { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+    .basic-tag { display: inline-block; background: rgba(0,255,136,0.15); color: #00ff88; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 8px; }
+    .basic-hint { color: #8b98a5; font-size: 12px; margin-top: 12px; }
+    .basic-row { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
+    .basic-slot { background: rgba(255,255,255,0.04); border: 1px solid rgba(0,179,255,0.25); border-radius: 12px; padding: 12px; width: 190px; min-height: 110px; cursor: pointer; display: flex; flex-direction: column; transition: .15s; }
+    .basic-slot:hover { border-color: rgba(0,255,136,0.45); }
+    .basic-slot.pending { border-color: #ffb020; box-shadow: 0 0 0 1px #ffb020 inset; }
+    .basic-slot .img { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .basic-slot .img img { max-width: 100%; max-height: 50px; object-fit: contain; }
+    .basic-slot .skinname { font-size: 11px; color: #aeb9c4; margin-top: 6px; text-align: center; }
+    .upsell { background: linear-gradient(135deg, rgba(255,210,74,0.08), rgba(255,157,0,0.05)); border: 1px solid rgba(255,210,74,0.3); border-radius: 14px; padding: 26px; text-align: center; color: #e6edf3; line-height: 1.6; }
+    .upsell b { color: #ffd24a; }
+</style>
+
+<!-- ===== BASIC: default pichoq — BARCHA o'yinchilar uchun ===== -->
+<div class="basic-box">
+    <div class="basic-head">🔪 Default pichoq <span class="basic-tag">Bepul</span></div>
+    <div class="basic-row">
+        <div class="basic-slot" id="basic-knife" onclick="openBasicKnife()">
+            <div class="img">{% if knife_cur.image %}<img src="{{ knife_cur.image }}">{% elif knife_default %}<img src="{{ knife_default }}" style="opacity:.6">{% endif %}</div>
+            <div class="skinname">{% if knife_cur %}{{ knife_cur.name }}{% else %}Default pichoq{% endif %}</div>
+        </div>
+        <button class="save-btn small" id="basic-save" onclick="saveBasic()">Saqlash</button>
+    </div>
+    <div class="basic-hint">Istalgan pichoqning <b>default</b> (skinsiz) ko'rinishini tanlang. Bo'yoqli (skinli) variantlar, qo'lqop va agentlar uchun <b style="color:#ffd24a">Pro</b> yoki <b style="color:#ffd24a">VIP</b> kerak.</div>
+</div>
+
+{% if can_paint %}
+<div class="wp-hint">Katakni bosing → skin tanlang. Tanlovlar <b>darhol saqlanmaydi</b> — pastdagi <b style="color:#00ff88;">Saqlash</b> tugmasini bosing.</div>
+
+<div class="slot-grid">
+    <!-- Pichoq -->
+    <div class="slot special" id="slot-knife" onclick="openKnife()">
+        <div class="title">🔪 Pichoq</div>
+        <div class="img">{% if knife_cur.image %}<img src="{{ knife_cur.image }}">{% elif knife_default %}<img src="{{ knife_default }}" style="opacity:.5">{% endif %}</div>
+        <div class="skinname">{% if knife_cur %}{{ knife_cur.name }}{% else %}<span class="empty-mark">Default</span>{% endif %}</div>
+        <div class="seedrow" onclick="event.stopPropagation()">
+            <button type="button" class="seed-btn" id="knife-seed-btn" onclick="editSeed('knife')">🎨 Pattern: <b id="knife-seed-val">{{ knife_cur.seed|default:0 }}</b></button>
+            <input class="seed-input" id="knife-seed-input" type="number" min="0" max="1000" style="display:none">
+        </div>
+    </div>
+    <!-- Qo'lqop -->
+    <div class="slot special" id="slot-gloves" onclick="openGloves()">
+        <div class="title">🧤 Qo'lqop</div>
+        <div class="img">{% if gloves_cur.image %}<img src="{{ gloves_cur.image }}">{% endif %}</div>
+        <div class="skinname">{% if gloves_cur %}{{ gloves_cur.name }}{% else %}<span class="empty-mark">Default</span>{% endif %}</div>
+        <div class="seedrow" onclick="event.stopPropagation()">
+            <button type="button" class="seed-btn" id="gloves-seed-btn" onclick="editSeed('gloves')">🎨 Pattern: <b id="gloves-seed-val">{{ gloves_cur.seed|default:0 }}</b></button>
+            <input class="seed-input" id="gloves-seed-input" type="number" min="0" max="1000" style="display:none">
+        </div>
+    </div>
+    <!-- Agent CT -->
+    <div class="slot special" id="slot-agent-ct" onclick="openAgent('ct')">
+        <div class="title">🛡️ Agent CT</div>
+        <div class="img">{% if agent_ct_cur.image %}<img src="{{ agent_ct_cur.image }}">{% endif %}</div>
+        <div class="skinname">{% if agent_ct_cur %}{{ agent_ct_cur.name }}{% else %}<span class="empty-mark">Default</span>{% endif %}</div>
+    </div>
+    <!-- Agent T -->
+    <div class="slot special" id="slot-agent-t" onclick="openAgent('t')">
+        <div class="title">🔫 Agent T</div>
+        <div class="img">{% if agent_t_cur.image %}<img src="{{ agent_t_cur.image }}">{% endif %}</div>
+        <div class="skinname">{% if agent_t_cur %}{{ agent_t_cur.name }}{% else %}<span class="empty-mark">Default</span>{% endif %}</div>
+    </div>
+    <!-- Qurollar -->
+    {% for w in weapons %}
+    <div class="slot" id="slot-w-{{ w.defindex }}" onclick="openWeapon({{ w.defindex }},'{{ w.display_name }}')">
+        <div class="title">{{ w.display_name }}</div>
+        <div class="img">{% if w.cur_image %}<img src="{{ w.cur_image }}">{% elif w.default_image %}<img src="{{ w.default_image }}" style="opacity:.5">{% endif %}</div>
+        <div class="skinname">{% if w.cur_paint %}{{ w.cur_name }}{% else %}<span class="empty-mark">Default</span>{% endif %}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+        <div class="modal-top">
+            <div class="mt-left">
+                <span class="mback" id="mback" style="display:none" onclick="backToModels()">← Orqaga</span>
+                <h3 id="modal-title">Tanlang</h3>
+            </div>
+            <span class="modal-close" onclick="closeModal()">✕</span>
+        </div>
+        <div class="grid2" id="mgrid"></div>
+    </div>
+</div>
+
+<div class="savebar">
+    <span class="info" id="save-info">O'zgarish yo'q</span>
+    <button class="save-btn" id="save-btn" disabled onclick="saveAll()">Saqlash</button>
+</div>
+<div class="toast" id="toast">✓ Saqlandi</div>
+
+{{ knives|json_script:"knives-data" }}
+{{ gloves|json_script:"gloves-data" }}
+{{ knife_cur|json_script:"knife-cur-data" }}
+{{ gloves_cur|json_script:"gloves-cur-data" }}
+{{ agents_t|json_script:"agents-t-data" }}
+{{ agents_ct|json_script:"agents-ct-data" }}
+<script>
+    const KNIVES = JSON.parse(document.getElementById('knives-data').textContent);
+    const GLOVES = JSON.parse(document.getElementById('gloves-data').textContent);
+    const AGENTS = {
+        t: JSON.parse(document.getElementById('agents-t-data').textContent),
+        ct: JSON.parse(document.getElementById('agents-ct-data').textContent),
+    };
+    // Joriy (saqlangan) pichoq/qo'lqop — seed-only o'zgarishni saqlash uchun
+    const CUR = {
+        knife: JSON.parse(document.getElementById('knife-cur-data').textContent),
+        gloves: JSON.parse(document.getElementById('gloves-cur-data').textContent),
+    };
+    function getCookie(n){const m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?m.pop():'';}
+    const CSRF = getCookie('csrftoken');
+
+    // Saqlanmagan o'zgarishlar
+    const pending = { weapons:{}, knife:null, gloves:null, agent_t:null, agent_ct:null };
+    let modalCtx = null; // {cat, defindex, weapon_name} yoki {cat:'agent', side}
+
+    function changeCount(){ return Object.keys(pending.weapons).length + (pending.knife?1:0) + (pending.gloves?1:0) + (pending.agent_t?1:0) + (pending.agent_ct?1:0); }
+    function refreshSaveBar(){
+        const n = changeCount();
+        document.getElementById('save-btn').disabled = (n===0);
+        document.getElementById('save-info').textContent = n ? (n + ' ta o\'zgarish saqlanmagan') : 'O\'zgarish yo\'q';
+    }
+
+    // --- Modal ochish ---
+    function openWeapon(defindex, title){
+        modalCtx = {cat:'weapon', defindex, weapon_name:null};
+        document.getElementById('mback').style.display='none';
+        loadSkins(`/skins/api/weapon/${defindex}/`, title);
+    }
+    function openKnife(){ showModels('knife'); }
+    function openGloves(){ showModels('gloves'); }
+
+    function openAgent(side){
+        modalCtx = {cat:'agent', side};
+        document.getElementById('mback').style.display='none';
+        document.getElementById('modal-title').textContent = (side==='ct'?'Agent CT tanlang':'Agent T tanlang');
+        const grid=document.getElementById('mgrid'); grid.innerHTML='';
+        AGENTS[side].forEach(a=>{
+            const div=document.createElement('div'); div.className='cell';
+            div.innerHTML=`<img loading="lazy" src="${a.image}" onerror="this.style.opacity=.15"><div class="cn">${a.name}</div>`;
+            div.onclick=()=>{
+                if(side==='ct'){ pending.agent_ct=a.model; updateSlot('slot-agent-ct', a); }
+                else { pending.agent_t=a.model; updateSlot('slot-agent-t', a); }
+                refreshSaveBar(); closeModal();
+            };
+            grid.appendChild(div);
+        });
+        document.getElementById('modal').classList.add('show');
+    }
+
+    function showModels(cat){
+        modalCtx = {cat, defindex:null, weapon_name:null};
+        document.getElementById('mback').style.display='none';
+        document.getElementById('modal-title').textContent = (cat==='knife'?'Pichoq tanlang':'Qo\'lqop tanlang');
+        const grid = document.getElementById('mgrid'); grid.innerHTML='';
+        (cat==='knife'?KNIVES:GLOVES).forEach(m=>{
+            const div=document.createElement('div');
+            div.className='cell';
+            div.innerHTML=`<div class="cn" style="font-weight:700;color:#e6edf3;padding:14px 0;">${m.display_name}</div>`;
+            div.onclick=()=>{
+                modalCtx.defindex=m.defindex; modalCtx.weapon_name=m.weapon_name||null;
+                const api=(cat==='gloves')?`/skins/api/gloves/${m.defindex}/`:`/skins/api/weapon/${m.defindex}/`;
+                document.getElementById('mback').style.display='inline';
+                loadSkins(api, m.display_name);
+            };
+            grid.appendChild(div);
+        });
+        document.getElementById('modal').classList.add('show');
+    }
+    function backToModels(){ if(modalCtx) showModels(modalCtx.cat); }
+
+    async function loadSkins(api, title){
+        document.getElementById('modal-title').textContent = title;
+        const grid=document.getElementById('mgrid');
+        grid.innerHTML='<div style="padding:20px;color:#8b98a5;">Yuklanmoqda...</div>';
+        document.getElementById('modal').classList.add('show');
+        const res=await fetch(api,{credentials:'same-origin'});
+        const data=await res.json();
+        grid.innerHTML='';
+        (data.skins||[]).forEach(s=>{
+            const div=document.createElement('div'); div.className='cell';
+            div.innerHTML=`<img loading="lazy" src="${s.image}" onerror="this.style.opacity=.15"><div class="cn">${s.name}</div>`;
+            div.onclick=()=>stage(s);
+            grid.appendChild(div);
+        });
+    }
+
+    // --- Tanlash (staging - DB ga yozilmaydi) ---
+    function stage(skin){
+        const c=modalCtx;
+        if(c.cat==='weapon'){
+            pending.weapons[c.defindex]=skin.paint;
+            updateSlot(`slot-w-${c.defindex}`, skin);
+        } else if(c.cat==='knife'){
+            pending.knife={weapon_name:c.weapon_name, defindex:c.defindex, paint:skin.paint, seed:curSeed('knife')};
+            updateSlot('slot-knife', skin);
+        } else if(c.cat==='gloves'){
+            pending.gloves={defindex:c.defindex, paint:skin.paint, seed:curSeed('gloves')};
+            updateSlot('slot-gloves', skin);
+        }
+        refreshSaveBar();
+        closeModal();
+    }
+
+    // --- Pattern (seed) ---
+    function curSeed(kind){ return parseInt(document.getElementById(kind+'-seed-val').textContent, 10) || 0; }
+    function editSeed(kind){
+        const inp=document.getElementById(kind+'-seed-input');
+        document.getElementById(kind+'-seed-btn').style.display='none';
+        inp.value=curSeed(kind); inp.style.display='block'; inp.focus(); inp.select();
+        inp.onblur=()=>commitSeed(kind);
+        inp.onkeydown=(e)=>{ if(e.key==='Enter') inp.blur(); if(e.key==='Escape'){ inp.value=curSeed(kind); inp.blur(); } };
+    }
+    function commitSeed(kind){
+        const inp=document.getElementById(kind+'-seed-input');
+        let v=Math.max(0, Math.min(1000, parseInt(inp.value,10)||0));
+        inp.style.display='none';
+        document.getElementById(kind+'-seed-btn').style.display='block';
+        const base = pending[kind] || CUR[kind];
+        if(!base){ toast('✗ Avval '+(kind==='knife'?'pichoq':'qo\'lqop')+' tanlang'); return; }
+        document.getElementById(kind+'-seed-val').textContent=v;
+        if(kind==='knife'){
+            pending.knife={weapon_name:base.weapon_name, defindex:base.defindex, paint:base.paint, seed:v};
+        } else {
+            pending.gloves={defindex:base.defindex, paint:base.paint, seed:v};
+        }
+        document.getElementById('slot-'+kind).classList.add('pending');
+        refreshSaveBar();
+    }
+    function updateSlot(id, skin){
+        const slot=document.getElementById(id);
+        slot.classList.add('pending');
+        slot.querySelector('.img').innerHTML = skin.image?`<img src="${skin.image}">`:'';
+        slot.querySelector('.skinname').textContent = skin.name||'';
+    }
+
+    async function saveAll(){
+        const btn=document.getElementById('save-btn'); btn.disabled=true; btn.textContent='Saqlanmoqda...';
+        const res=await fetch('/skins/save-all/',{
+            method:'POST', credentials:'same-origin',
+            headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+            body: JSON.stringify(pending),
+        });
+        btn.textContent='Saqlash';
+        if(res.ok){
+            if(pending.knife) CUR.knife=pending.knife;
+            if(pending.gloves) CUR.gloves=pending.gloves;
+            pending.weapons={}; pending.knife=null; pending.gloves=null; pending.agent_t=null; pending.agent_ct=null;
+            document.querySelectorAll('.slot.pending').forEach(s=>s.classList.remove('pending'));
+            refreshSaveBar();
+            toast('✓ Saqlandi — o\'yinda qayta ulanganda qo\'llanadi');
+        } else {
+            const d=await res.json().catch(()=>({}));
+            toast('✗ '+(d.error||'Xatolik')); btn.disabled=false;
+        }
+    }
+
+    function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+    let tt; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
+</script>
+{% else %}
+<div class="upsell">🎨 Qurol skinlari, qo'lqop, agent va bo'yoqli pichoqlar uchun <b>Pro</b> yoki <b>VIP</b> kerak.<br>Hozircha istalgan pichoqning <b>default</b> ko'rinishini bepul tanlashingiz mumkin (yuqorida).</div>
+{% endif %}
+
+<!-- ===== BASIC pichoq modal (barcha o'yinchilar) ===== -->
+<div class="modal-bg" id="basic-modal" onclick="if(event.target===this)closeBasicModal()">
+    <div class="modal">
+        <div class="modal-top">
+            <div class="mt-left"><h3>Pichoq tanlang (Default)</h3></div>
+            <span class="modal-close" onclick="closeBasicModal()">✕</span>
+        </div>
+        <div class="grid2" id="basic-grid"></div>
+    </div>
+</div>
+<div class="toast" id="basic-toast">✓ Saqlandi</div>
+
+{{ knives|json_script:"basic-knives-data" }}
+<script>
+(function(){
+    const KN = JSON.parse(document.getElementById('basic-knives-data').textContent);
+    function gc(n){const m=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return m?m.pop():'';}
+    let chosen = null;
+
+    window.openBasicKnife = function(){
+        const g = document.getElementById('basic-grid'); g.innerHTML='';
+        KN.forEach(k=>{
+            const d=document.createElement('div'); d.className='cell';
+            d.innerHTML=`<img loading="lazy" src="${k.default_image||''}" onerror="this.style.opacity=.15"><div class="cn">${k.display_name}</div>`;
+            d.onclick=()=>{
+                chosen = {weapon_name:k.weapon_name};
+                const slot=document.getElementById('basic-knife');
+                slot.classList.add('pending');
+                slot.querySelector('.img').innerHTML = k.default_image?`<img src="${k.default_image}">`:'';
+                slot.querySelector('.skinname').textContent = k.display_name;
+                closeBasicModal();
+            };
+            g.appendChild(d);
+        });
+        document.getElementById('basic-modal').classList.add('show');
+    };
+    window.closeBasicModal = function(){ document.getElementById('basic-modal').classList.remove('show'); };
+
+    window.saveBasic = async function(){
+        if(!chosen){ bt('Avval pichoq tanlang'); return; }
+        const btn=document.getElementById('basic-save'); btn.disabled=true; const old=btn.textContent; btn.textContent='Saqlanmoqda...';
+        const body = new URLSearchParams(); body.set('weapon_name', chosen.weapon_name);
+        const r = await fetch('/skins/save-basic/', {
+            method:'POST', credentials:'same-origin',
+            headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':gc('csrftoken')},
+            body: body.toString(),
+        });
+        btn.disabled=false; btn.textContent=old;
+        if(r.ok){ document.getElementById('basic-knife').classList.remove('pending'); bt('✓ Saqlandi — o\'yinda !wp bilan yangilanadi'); }
+        else { const d=await r.json().catch(()=>({})); bt('✗ '+(d.error||'Xatolik')); }
+    };
+
+    let tt; function bt(m){const t=document.getElementById('basic-toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
+})();
+</script>
+
+{% endif %}
+{% endblock %}

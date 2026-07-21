@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Leaderboard — MaxZ Servers{% endblock %}
+{% block nav_lb %}active{% endblock %}
+
+{% block content %}
+<style>
+    .lb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .tab-link { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #aeb9c4; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+    .tab-link:hover { color: #fff; border-color: rgba(0,255,136,0.4); }
+    .pager { display: flex; gap: 8px; justify-content: center; margin-top: 26px; align-items: center; }
+    .pager a, .pager span { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+    .pager a { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #aeb9c4; }
+    .pager a:hover { color: #fff; border-color: #00ff88; }
+    .pager .cur { color: #6b7681; }
+    .table tbody tr.clickable { cursor: pointer; transition: background .12s; }
+    .table tbody tr.clickable:hover { background: rgba(0,255,136,0.07); }
+    .pname { color: #e6edf3; }
+    .table tbody tr.clickable:hover .pname { color: #00ff88; }
+</style>
+
+<div class="lb-head">
+    <div class="page-title" style="margin:0;">🏆 Global Leaderboard</div>
+    <a href="/leaderboard/maps/" class="tab-link">📋 Map bo'yicha reytinglar →</a>
+</div>
+
+{% if players %}
+<table class="table">
+    <thead>
+        <tr><th>#</th><th>O'yinchi</th><th>Ochkolar</th><th>Ulanishlar</th></tr>
+    </thead>
+    <tbody>
+        {% for p in players %}
+        <tr {% if p.steam_id %}class="clickable" onclick="location.href='/u/{{ p.steam_id }}/'"{% endif %}>
+            <td class="rank">{{ p.rank }}</td>
+            <td class="pname">{{ p.name }}</td>
+            <td class="pts">{{ p.points }}</td>
+            <td>{{ p.connected }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="pager">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">← Oldingi</a>{% endif %}
+    <span class="cur">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Keyingi →</a>{% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty">Hozircha o'yinchilar yo'q. Serverda o'ynab, birinchi bo'ling!</div>
+{% endif %}
+{% endblock %}

@@ -12,22 +12,47 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Maxfiy sozlamalar .env dan o'qiladi (git'ga tushmaydi). Namuna: .env.example
+load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+
+def env(key, default=None):
+    return os.environ.get(key, default)
+
+
+def env_required(key):
+    """Maxfiy qiymat — .env da bo'lmasa xato beradi (jim fallback yo'q)."""
+    val = os.environ.get(key)
+    if not val:
+        raise ImproperlyConfigured(f"{key} .env faylida o'rnatilmagan")
+    return val
+
+
+def env_bool(key, default=False):
+    val = os.environ.get(key)
+    if val is None:
+        return default
+    return val.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def env_list(key, default=''):
+    return [x.strip() for x in os.environ.get(key, default).split(',') if x.strip()]
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$4llrfc=7hq2#&=up8jv*^^u_l==*b7%bwu@ud*7(8vlxiy156'
+SECRET_KEY = env_required('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DEBUG', False)
 
-ALLOWED_HOSTS = []
-
-
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,10 +63,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'social_django',
     'users',
     'servers',
+    'records',
 ]
 
 MIDDLEWARE = [
@@ -53,11 +80,61 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Steam/social-auth xatolarini ushlab, do'stona sahifaga yo'naltiradi
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'cs2panel.urls'
 
-STEAM_API_KEY = os.environ.get('STEAM_API_KEY', '')
+STEAM_API_KEY = env_required('STEAM_API_KEY')
+
+# Reserved slot / VIP priority — Django aktiv VIP'larni admins.json ga yozadi
+ADMIN_OWNER_STEAMID = env('ADMIN_OWNER_STEAMID', '76561199538815857')  # root admin
+ADMIN_CONFIG_PATHS = env_list(
+    'ADMIN_CONFIG_PATHS',
+    r'F:\cSERVER\game\csgo\addons\counterstrikesharp\configs\admins.json,'
+    r'E:\cSERVER_1v1\game\csgo\addons\counterstrikesharp\configs\admins.json',
+)
+
+# FACEIT integratsiyasi — yuqori levelli o'yinchilarga avtomatik VIP
+FACEIT_API_KEY = env('FACEIT_API_KEY', '')          # FACEIT dev portaldan (bo'sh = o'chiq)
+FACEIT_VIP_LEVEL = int(env('FACEIT_VIP_LEVEL', 10))  # shu level va undan yuqori (max 10)
+FACEIT_VIP_DAYS = int(env('FACEIT_VIP_DAYS', 10))    # necha kun VIP
+FACEIT_VIP_PLAN = env('FACEIT_VIP_PLAN', 'vip')      # qaysi plan (vip/pro)
+
+# SharpTimer server tickrate (64 yoki 128)
+SERVER_TICKRATE = int(env('SERVER_TICKRATE', 128))
+
+# Homepage'da ko'rsatiladigan public IP (do'stlar shu IP ga ulanadi)
+SERVER_PUBLIC_IP = env('SERVER_PUBLIC_IP', '127.0.0.1')
+
+# WeaponPaints (skin changer) MySQL DB - skin tanlagich shunga yozadi
+WEAPONPAINTS_DB = {
+    'host': env('WP_DB_HOST', 'localhost'),
+    'port': int(env('WP_DB_PORT', 3306)),
+    'user': env('WP_DB_USER', 'wp_user'),
+    'password': env_required('WP_DB_PASSWORD'),
+    'database': env('WP_DB_NAME', 'weaponpaints'),
+}
+# WeaponPaints skin ma'lumotlari fayli (rasm + nom)
+WEAPONPAINTS_SKINS_JSON = env(
+    'WP_SKINS_JSON',
+    r'F:\cSERVER\game\csgo\addons\counterstrikesharp\plugins\WeaponPaints\data\skins_en.json',
+)
+
+# --- RCON xavfsizlik: admin panel "generic" RCON oynasi uchun buyruq policy ---
+# Bloklangan buyruqlar har doim rad etiladi (katastrofik: parol/o'chirish/fayl yozish).
+RCON_BLOCKED_COMMANDS = env_list(
+    'RCON_BLOCKED_COMMANDS',
+    'rcon_password,quit,exit,_restart,exec,sv_downloadurl,host_writeconfig,'
+    'logaddress_add,logaddress_add_http,log,con_logfile,sv_logfile,writeid,writeip',
+)
+# Whitelist: bo'sh bo'lsa faqat blocklist ishlaydi; to'ldirilsa FAQAT shu buyruqlar ruxsat.
+RCON_ALLOWED_COMMANDS = env_list('RCON_ALLOWED_COMMANDS')
+
+# --- Server-bot endpointlar (checkpoint submit) uchun ishonchli IP'lar ---
+# Bo'sh = cheklov yo'q (token baribir talab qilinadi). Prod'da o'yin server IP'sini qo'ying.
+TRUSTED_SERVER_IPS = env_list('TRUSTED_SERVER_IPS')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -72,7 +149,7 @@ REST_FRAMEWORK = {
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -94,11 +171,11 @@ WSGI_APPLICATION = 'cs2panel.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cs_web',
-        'USER': 'postgres',
-        'PASSWORD': 'root123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': env('DB_NAME', 'cs_web'),
+        'USER': env('DB_USER', 'postgres'),
+        'PASSWORD': env_required('DB_PASSWORD'),
+        'HOST': env('DB_HOST', 'localhost'),
+        'PORT': env('DB_PORT', '5432'),
     }
 }
 
@@ -112,7 +189,7 @@ AUTHENTICATION_BACKENDS = [
     'social_core.backends.steam.SteamOpenId',
     'django.contrib.auth.backends.ModelBackend',
 ]
-SOCIAL_AUTH_STEAM_API_KEY = 'YOUR_STEAM_API_KEY'  # steamcommunity.com/dev/apikey
+SOCIAL_AUTH_STEAM_API_KEY = STEAM_API_KEY  # .env dagi STEAM_API_KEY dan olinadi
 SOCIAL_AUTH_STEAM_EXTRA_DATA = ['player']
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
@@ -127,11 +204,15 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.user_details',
 )
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # frontend
-]
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:3000')
 
-LOGIN_REDIRECT_URL = '/api/users/me/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = '/auth/login/steam/'
+
+# Social-auth xatosi (masalan Steam 503) bo'lganda do'stona sahifaga yo'naltirish
+SOCIAL_AUTH_LOGIN_ERROR_URL = '/auth-error/'
+SOCIAL_AUTH_RAISE_EXCEPTIONS = False  # DEBUG=True da ham traceback emas, do'stona sahifa
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -150,6 +231,29 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Parol hashlash — Argon2 birinchi (eng kuchli), keyin Django defaultlari (eski hashlarni o'qish uchun)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
+# Cache — django-ratelimit shunga tayanadi.
+# DIQQAT (prod): bir nechta worker bo'lsa LocMem yetarli emas — Redis/Memcached qo'ying.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'cs2panel-default',
+    }
+}
+
+# Rate limit (login/token brute-force himoyasi). False qilib o'chirsa bo'ladi.
+RATELIMIT_ENABLE = env_bool('RATELIMIT_ENABLE', True)
+
+# Admin URL — default 'admin/' bots tomonidan skanerlanadi. .env da maxfiy qiymat qo'ying.
+ADMIN_URL = env('ADMIN_URL', 'admin/').strip('/') + '/'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -167,8 +271,34 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# --- Xavfsizlik sozlamalari ---
+# Dev (DEBUG=True) da o'chiq, prod (DEBUG=False) da avtomatik yoqiladi.
+# .env orqali har birini majburan boshqarsa bo'ladi.
+_PROD = not DEBUG
+
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', _PROD)
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', _PROD)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', _PROD)
+SECURE_HSTS_SECONDS = int(env('SECURE_HSTS_SECONDS', '31536000' if _PROD else '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', _PROD)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', _PROD)
+
+# Proksi (ngrok/Cloudflare) orqasida HTTPS ni to'g'ri aniqlash
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Doimiy yoqilgan himoyalar
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_HTTPONLY = True
+# CSRF_COOKIE_HTTPONLY = False bo'lishi SHART — frontend (skins/panel) CSRF token'ni
+# JS orqali cookie'dan o'qiydi (getCookie('csrftoken')). True bo'lsa AJAX POST buziladi.
+CSRF_COOKIE_HTTPONLY = False
+SECURE_REFERRER_POLICY = 'same-origin'

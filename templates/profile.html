@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Profil — MaxZ Servers{% endblock %}
+{% block nav_prof %}active{% endblock %}
+
+{% block content %}
+<style>
+    .profile-head { display: flex; align-items: center; gap: 18px; margin-bottom: 30px; }
+    .p-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #00ff88, #00b3ff); color: #0a0e12; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; object-fit: cover; }
+    .p-name { font-size: 24px; font-weight: 800; }
+    .p-steam { color: #6b7681; font-size: 13px; font-family: 'Consolas', monospace; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 32px; }
+    .stat-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px; }
+    .stat-val { font-size: 26px; font-weight: 800; color: #00ff88; }
+    .stat-label { font-size: 12px; color: #8b98a5; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+    .vip-tag { display: inline-block; background: linear-gradient(135deg,#ffd24a,#ff9d00); color: #1a1205; font-size: 13px; font-weight: 900; padding: 2px 9px; border-radius: 6px; vertical-align: middle; margin-right: 8px; letter-spacing: .5px; }
+    .loadout { margin-left: auto; display: flex; gap: 14px; }
+    .lo-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(0,179,255,0.25); border-radius: 12px; padding: 10px 12px; text-align: center; min-width: 110px; }
+    .lo-item img { max-width: 100px; max-height: 50px; object-fit: contain; }
+    .lo-item .lo-name { font-size: 11px; color: #aeb9c4; margin-top: 6px; line-height: 1.25; }
+    .lo-item .lo-cap { font-size: 10px; color: #6b7681; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    @media (max-width: 640px) { .profile-head { flex-wrap: wrap; } .loadout { margin-left: 0; width: 100%; } }
+</style>
+
+<div class="page-title">{% if is_own %}Profil{% else %}{{ display_name }}{% endif %}</div>
+
+{% if steam_id %}
+<div class="profile-head">
+    {% if avatar %}
+        <img class="p-avatar" src="{{ avatar }}" alt="">
+    {% else %}
+        <div class="p-avatar">{{ display_name|first|upper }}</div>
+    {% endif %}
+    <div>
+        <div class="p-name">{% if is_vip %}<span class="vip-tag">VIP</span>{% endif %}{{ display_name }}</div>
+        <div class="p-steam">{{ steam_id }}</div>
+    </div>
+    {% if knife_cur or gloves_cur %}
+    <div class="loadout">
+        {% if knife_cur %}
+        <div class="lo-item">
+            <div class="lo-cap">🔪 Pichoq</div>
+            {% if knife_cur.image %}<img src="{{ knife_cur.image }}">{% endif %}
+            <div class="lo-name">{{ knife_cur.name|default:"Default" }}</div>
+        </div>
+        {% endif %}
+        {% if gloves_cur %}
+        <div class="lo-item">
+            <div class="lo-cap">🧤 Qo'lqop</div>
+            {% if gloves_cur.image %}<img src="{{ gloves_cur.image }}">{% endif %}
+            <div class="lo-name">{{ gloves_cur.name|default:"Default" }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if faceit_level %}
+<div class="stat-grid">
+    <div class="stat-box"><div class="stat-val" style="color:#ff5500;">{{ faceit_level }}</div><div class="stat-label">FACEIT Level</div></div>
+</div>
+{% endif %}
+
+{% if stats %}
+<div class="stat-grid">
+    <div class="stat-box"><div class="stat-val">#{{ stats.rank }}</div><div class="stat-label">Reyting ({{ stats.total_players }} dan)</div></div>
+    <div class="stat-box"><div class="stat-val">{{ stats.points }}</div><div class="stat-label">Ochkolar</div></div>
+    <div class="stat-box"><div class="stat-val">{{ stats.maps_completed }}</div><div class="stat-label">Maplar</div></div>
+    <div class="stat-box"><div class="stat-val">{{ stats.total_runs }}</div><div class="stat-label">Yugurishlar</div></div>
+</div>
+
+<div class="page-title" style="font-size:18px;">Top rekordlar</div>
+{% if stats.top_records %}
+<table class="table">
+    <thead><tr><th>Map</th><th>Vaqt</th><th>Tugatgan</th></tr></thead>
+    <tbody>
+        {% for r in stats.top_records %}
+        <tr>
+            <td class="mono">{{ r.map }}</td>
+            <td class="pts mono">{{ r.time }}</td>
+            <td>{{ r.finished }}x</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty">Hali rekord yo'q. Serverda o'ynang!</div>
+{% endif %}
+
+{% else %}
+<div class="empty">
+    {% if is_own %}SharpTimer'da hali statistikangiz yo'q.<br>Serverda o'ynab, birinchi rekordingizni qo'ying!{% else %}Bu o'yinchida hali statistika yo'q.{% endif %}
+</div>
+{% endif %}
+{% endblock %}

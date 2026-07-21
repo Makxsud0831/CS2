@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}{{ map_name }} — Leaderboard{% endblock %}
+{% block nav_lb %}active{% endblock %}
+
+{% block content %}
+<style>
+    .back { color: #6b7681; font-size: 13px; }
+    .back:hover { color: #fff; }
+    .medal { font-weight: 800; }
+    .m1 { color: #ffd700; } .m2 { color: #c0c0c0; } .m3 { color: #cd7f32; }
+    .table tbody tr.clickable { cursor: pointer; transition: background .12s; }
+    .table tbody tr.clickable:hover { background: rgba(0,255,136,0.07); }
+</style>
+
+<div style="margin-bottom:18px;"><a href="/leaderboard/maps/" class="back">← Barcha maplar</a></div>
+<div class="page-title">⏱ <span class="mono" style="color:#58e6a0;">{{ map_name }}</span></div>
+
+{% if entries %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>#</th><th>O'yinchi</th><th>Vaqt</th>
+            {% if is_kz %}<th>CP</th><th>TP</th>{% endif %}
+            <th>Tugatgan</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in entries %}
+        <tr {% if e.steam_id %}class="clickable" onclick="location.href='/u/{{ e.steam_id }}/'"{% endif %}>
+            <td class="rank">
+                {% if e.rank == 1 %}<span class="medal m1">🥇</span>
+                {% elif e.rank == 2 %}<span class="medal m2">🥈</span>
+                {% elif e.rank == 3 %}<span class="medal m3">🥉</span>
+                {% else %}{{ e.rank }}{% endif %}
+            </td>
+            <td>{{ e.steam_name }}</td>
+            <td class="pts mono">{{ e.time_display }}</td>
+            {% if is_kz %}
+            <td>{% if e.cp_count != None %}{{ e.cp_count }}{% else %}—{% endif %}</td>
+            <td>{% if e.tp_count != None %}{{ e.tp_count }}{% else %}—{% endif %}</td>
+            {% endif %}
+            <td>{{ e.times_finished }}x</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty">Bu mapda hali rekord yo'q.</div>
+{% endif %}
+{% endblock %}

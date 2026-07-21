@@ -1,3 +1,9 @@
-venv/ 
-__pycache__/ 
-*.pyc 
+venv/
+__pycache__/
+*.pyc
+
+.env
+
+.idea/dataSources/
+.idea/dataSources.xml
+.idea/dataSources.local.xml

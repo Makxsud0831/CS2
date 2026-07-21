@@ -11,6 +11,20 @@ class User(AbstractUser):
             return self.steam_profile.steam_id64
         return None
 
+    @property
+    def steam_display_name(self):
+        """Steam'dagi chiroyli nom (yo'q bo'lsa username)."""
+        if hasattr(self, 'steam_profile') and self.steam_profile.display_name:
+            return self.steam_profile.display_name
+        return self.username
+
+    @property
+    def steam_avatar(self):
+        """Steam statik avatar URL (yo'q bo'lsa bo'sh)."""
+        if hasattr(self, 'steam_profile'):
+            return self.steam_profile.avatar_url
+        return ''
+
     def is_premium(self):
         return hasattr(self, 'subscription') and self.subscription.is_active()
 
@@ -19,7 +33,6 @@ class User(AbstractUser):
 
 
 class BasePermission:
-    """Abstract base class"""
     permissions = []
 
     @classmethod
@@ -60,6 +73,8 @@ class Subscription(models.Model):
     plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default=BASIC)
     started_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    # VIP tugaganda skinlar arxivlanganmi (expire_vips komandasi qo'yadi)
+    skins_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user} - {self.plan}"
@@ -76,12 +91,26 @@ class Subscription(models.Model):
         return permission in self.get_permissions() and self.is_active()
 
 
+class SkinBackup(models.Model):
+    """VIP tugaganda saqlangan WeaponPaints loadout (VIP qayta olinganda tiklanadi)."""
+    steam_id = models.CharField(max_length=64, unique=True)
+    data = models.JSONField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"SkinBackup({self.steam_id})"
+
+
 class SteamProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='steam_profile')
     steam_id64 = models.CharField(max_length=64, unique=True)
     profile_url = models.URLField(blank=True)
     display_name = models.CharField(max_length=128, blank=True)
-    last_synced = models.DateTimeField(null=True, blank=True)  # qo'shing
+    avatar_url = models.URLField(blank=True)  # Steam statik avatar (avatarfull)
+    last_synced = models.DateTimeField(null=True, blank=True)
+    # FACEIT integratsiyasi
+    faceit_level = models.IntegerField(null=True, blank=True)  # oxirgi tekshirilgan level (1-10)
+    faceit_vip_granted = models.BooleanField(default=False)    # bir martalik FACEIT VIP berilganmi
 
     def __str__(self):
         return f"{self.display_name} ({self.steam_id64})"

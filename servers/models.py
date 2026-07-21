@@ -3,11 +3,23 @@ from django.db import models
 
 class GameServer(models.Model):
     name = models.CharField(max_length=100)
+    # Server turi — homepage'da guruhlash uchun (surf, bhop, kz, 1v1...)
+    TYPE_CHOICES = [
+        ('surf', 'Surf'), ('bhop', 'Bhop'), ('kz', 'KZ'),
+        ('1v1', '1v1'), ('aim', 'Aim'), ('dm', 'DM'), ('other', 'Other'),
+    ]
+    server_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='other')
     ip = models.GenericIPAddressField()
     port = models.IntegerField(default=27015)
     rcon_password = models.CharField(max_length=128)
     region = models.CharField(max_length=50, default="uz")
     is_online = models.BooleanField(default=False)
+    # Django'dan serverni ishga tushirish uchun .bat fayl yo'li (faqat shu mashinada)
+    bat_path = models.CharField(max_length=255, blank=True)
+    # Homepage kartasi foni uchun map surati (URL yoki /static/ yo'li)
+    map_image = models.CharField(max_length=300, blank=True)
+    # Kartada ko'rsatiladigan joriy map nomi (masalan bhop_emevaelx3)
+    current_map = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -54,10 +66,19 @@ class ServerMap(models.Model):
         ("vanilla", "Vanilla"),
         ("bhop", "Bhop"),
         ("surf", "Surf"),
+        ("kz", "KZ"),
+        ("aim", "Aim"),
         ("retake", "Retake"),
         ("dm", "Deathmatch"),
     ]
     map_type = models.CharField(max_length=20, choices=MAP_TYPES, default="vanilla")
+
+    # Qiyinlik darajasi: 1 (oson) — 8 (extreme). 0 = belgilanmagan
+    tier = models.IntegerField(default=0)
+
+    # Map tuzilishi
+    stages = models.IntegerField(default=1)        # linear map = 1
+    bonus_count = models.IntegerField(default=0)   # bonus bosqichlar soni
 
     # Rotation system
     is_active = models.BooleanField(default=True)

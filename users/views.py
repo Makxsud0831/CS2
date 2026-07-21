@@ -6,7 +6,7 @@ from .serializers import UserMeSerializer
 class MeView(RetrieveUpdateAPIView):
     serializer_class = UserMeSerializer
     permission_classes = [IsAuthenticated]
-    http_method_names = ['get', 'patch', 'head', 'options']  # PUT o'chirildi
+    http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_object(self):
         return self.request.user
