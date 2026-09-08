@@ -4,7 +4,7 @@ What is the project — CS2 Panel
 
 A full-featured web panel and server management system for Counter-Strike 2 community servers, supporting BHOP, Surf, KZ, and 1v1 Aim game modes.
 
-Built with: Django
+Built with: Django.
 Owner: MaxZ AKE Makxsud0831
 
 
